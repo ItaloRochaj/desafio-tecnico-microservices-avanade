@@ -1,0 +1,35 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.docstates
+.vs/
+.nuget/
+*.nupkg
+*.swp
+*~
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.*
+.docker/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+.DS_Store
+*.pyc
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
