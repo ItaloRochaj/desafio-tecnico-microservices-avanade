@@ -12,7 +12,10 @@ builder.Services.AddDbContext<StockContext>(options =>
 
 // Autenticação JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
-builder.Services.AddJwtAuthentication(jwtSettings);
+if (jwtSettings != null)
+{
+    builder.Services.AddJwtAuthentication(jwtSettings);
+}
 
 // RabbitMQ
 builder.Services.AddSingleton<RabbitMQConsumer>();
@@ -48,8 +51,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Inicializar RabbitMQ
-var rabbitConsumer = app.Services.GetRequiredService<RabbitMQConsumer>();
-rabbitConsumer.StartConsuming();
+// RabbitMQ Consumer will start automatically as a BackgroundService
 
 app.Run();
