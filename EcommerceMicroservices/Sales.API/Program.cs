@@ -20,7 +20,7 @@ if (jwtSettings != null)
 
 // Services
 builder.Services.AddScoped<IStockService, StockService>();
-builder.Services.AddSingleton<RabbitMQPublisher>();
+builder.Services.AddScoped<RabbitMQPublisher>();
 
 // HTTP Client para Stock API
 builder.Services.AddHttpClient<StockService>(client =>
