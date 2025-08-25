@@ -2,15 +2,27 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
-using Common; // Certifique-se de que o namespace está correto
-
+using MMLib.SwaggerForOcelot; // precisa para o UseSwaggerForOcelotUI
+using Common; // Confirma se o namespace realmente é esse
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Ocelot config
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+// Configuração do Ocelot (inclui ocelot.json)
+builder.Configuration
+    .SetBasePath(builder.Environment.ContentRootPath)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("ocelot.json", optional: false, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
-// JWT Authentication
+// Configuração de JwtSettings a partir do appsettings.json
+var jwtSettingsSection = builder.Configuration.GetSection("JwtSettings");
+builder.Services.Configure<JwtSettings>(jwtSettingsSection);
+var jwtSettings = jwtSettingsSection.Get<JwtSettings>() ?? new JwtSettings();
+builder.Services.AddSingleton<JwtSettings>(jwtSettings);
+builder.Services.AddSingleton<TokenService>();
+
+// Autenticação JWT
 builder.Services.AddAuthentication("Jwt")
     .AddJwtBearer("Jwt", options =>
     {
@@ -20,38 +32,53 @@ builder.Services.AddAuthentication("Jwt")
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = "EcommerceMicroservices",
-            ValidAudience = "EcommerceUsers",
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("your_super_secret_key_32_chars_long"))
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
         };
     });
 
 builder.Services.AddAuthorization();
+
+// Controllers e Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddOcelot();
+
+// Ocelot + SwaggerForOcelot
+builder.Services.AddOcelot(builder.Configuration);
 builder.Services.AddSwaggerForOcelot(builder.Configuration);
+
 
 var app = builder.Build();
 
-
-
-// SwaggerForOcelot
-app.UseSwagger();
-app.UseSwaggerForOcelotUI(opt =>
+// Log de endpoints mapeados para depuração
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    opt.PathToSwaggerGenerator = "/swagger/docs";
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("EndpointLogger");
+    var dataSource = app.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
+    foreach (var endpoint in dataSource.Endpoints)
+    {
+        logger.LogInformation($"Endpoint: {endpoint.DisplayName}");
+    }
 });
+
+
+// Swagger apenas
+app.UseSwagger();
+
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map controllers with specific routes first
+
+
+
+// Controllers
 app.MapControllers();
 
-// Use Ocelot middleware with conditional routing
-app.UseWhen(context => !context.Request.Path.StartsWithSegments("/api/auth"), 
-    appBuilder => appBuilder.UseOcelot().Wait());
 
-app.Run();
+// Ocelot
+await app.UseOcelot();
+await app.RunAsync();
