@@ -4,7 +4,10 @@ using Common;
 using Stock.API.RabbitMQ;
 using Microsoft.Extensions.Logging;
 
+
 var builder = WebApplication.CreateBuilder(args);
+// Forçar binding na porta 80 para rodar corretamente no Docker
+builder.WebHost.UseUrls("http://*:80");
 
 // Configuração do Banco de Dados
 builder.Services.AddDbContext<StockContext>(options =>
@@ -41,11 +44,10 @@ using (var scope = app.Services.CreateScope())
     context.Database.EnsureCreated();
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+
+// Sempre habilita Swagger para integração com o Gateway
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();

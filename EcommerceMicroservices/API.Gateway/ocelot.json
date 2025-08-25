@@ -5,8 +5,8 @@
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5263
+          "Host": "stock-api",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/stock/products",
@@ -14,15 +14,16 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Jwt",
         "AllowedScopes": []
-      }
+      },
+      "SwaggerKey": "stock"
     },
     {
       "DownstreamPathTemplate": "/api/products/{id}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5263
+          "Host": "stock-api",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/stock/products/{id}",
@@ -30,15 +31,16 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Jwt",
         "AllowedScopes": []
-      }
+      },
+      "SwaggerKey": "stock"
     },
     {
       "DownstreamPathTemplate": "/api/products/{id}/stock",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5263
+          "Host": "stock-api",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/stock/products/{id}/stock",
@@ -46,15 +48,16 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Jwt",
         "AllowedScopes": []
-      }
+      },
+      "SwaggerKey": "stock"
     },
     {
       "DownstreamPathTemplate": "/api/products/validate",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 5263
+          "Host": "stock-api",
+          "Port": 80
         }
       ],
       "UpstreamPathTemplate": "/api/stock/products/validate",
@@ -62,10 +65,54 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Jwt",
         "AllowedScopes": []
-      }
+      },
+      "SwaggerKey": "stock"
+    }
+    ,
+    {
+      "DownstreamPathTemplate": "/api/orders",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "sales-api", "Port": 80 }
+      ],
+      "UpstreamPathTemplate": "/api/sales/orders",
+      "UpstreamHttpMethod": [ "GET", "POST" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Jwt",
+        "AllowedScopes": []
+      },
+      "SwaggerKey": "sales"
+    },
+    {
+      "DownstreamPathTemplate": "/api/orders/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "sales-api", "Port": 80 }
+      ],
+      "UpstreamPathTemplate": "/api/sales/orders/{id}",
+      "UpstreamHttpMethod": [ "GET", "DELETE" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Jwt",
+        "AllowedScopes": []
+      },
+      "SwaggerKey": "sales"
+    },
+    {
+      "DownstreamPathTemplate": "/api/orders/{id}/status",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "sales-api", "Port": 80 }
+      ],
+      "UpstreamPathTemplate": "/api/sales/orders/{id}/status",
+      "UpstreamHttpMethod": [ "PUT" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Jwt",
+        "AllowedScopes": []
+      },
+      "SwaggerKey": "sales"
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "http://localhost:5151"
+    "BaseUrl": "http://localhost:5000"
   }
 }

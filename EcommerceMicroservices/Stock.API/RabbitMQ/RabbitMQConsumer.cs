@@ -5,6 +5,8 @@ using Stock.API.Data;
 using Stock.API.Models;
 using System.Text.Json;
 using System.Text;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 namespace Stock.API.RabbitMQ
 {
@@ -24,52 +26,67 @@ namespace Stock.API.RabbitMQ
             _configuration = configuration;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             try
             {
                 CheckRabbitMQAvailability();
-                
                 if (_isRabbitMQAvailable)
                 {
                     _logger.LogInformation("RabbitMQ Consumer started in Production Mode");
-                    
-                    // Simular consumo de mensagens RabbitMQ em produção
-                    while (!stoppingToken.IsCancellationRequested)
+                    var factory = new ConnectionFactory
                     {
+                        Uri = new Uri(_configuration.GetConnectionString("RabbitMQ") ?? "amqp://guest:guest@localhost:5672")
+                    };
+                    var connection = factory.CreateConnection();
+                    var channel = connection.CreateModel();
+                    channel.QueueDeclare(queue: _stockUpdateQueue, durable: false, exclusive: false, autoDelete: false, arguments: null);
+                    var consumer = new EventingBasicConsumer(channel);
+                    consumer.Received += async (model, ea) =>
+                    {
+                        var body = ea.Body.ToArray();
+                        var message = Encoding.UTF8.GetString(body);
                         try
                         {
-                            // Em produção real, aqui seria o consume das filas RabbitMQ
-                            // Por agora, simular processamento periódico
-                            await ProcessPendingMessages();
-                            await Task.Delay(5000, stoppingToken); // Check every 5 seconds
+                            var stockUpdate = JsonSerializer.Deserialize<StockUpdateMessage>(message);
+                            _logger.LogInformation("📥 [RabbitMQ] Received from queue {Queue}: {Message}", _stockUpdateQueue, message);
+                            if (stockUpdate != null)
+                                await ProcessStockUpdateMessage(stockUpdate);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Error processing RabbitMQ messages");
-                            await Task.Delay(10000, stoppingToken); // Wait longer on error
+                            _logger.LogError(ex, "Error deserializing or processing stock update message");
                         }
-                    }
+                    };
+                    channel.BasicConsume(queue: _stockUpdateQueue, autoAck: true, consumer: consumer);
+                    // Mantém o serviço rodando enquanto não for cancelado
+                    return Task.CompletedTask;
                 }
                 else
                 {
                     _logger.LogWarning("RabbitMQ not available - running in Mock mode");
-                    
                     // Mock mode - simulate background processing
-                    while (!stoppingToken.IsCancellationRequested)
-                    {
-                        _logger.LogDebug("RabbitMQ Consumer running in mock mode...");
-                        await Task.Delay(30000, stoppingToken);
-                    }
+                    return RunMockMode(stoppingToken);
                 }
             }
             catch (OperationCanceledException)
             {
                 _logger.LogInformation("RabbitMQ Consumer stopped.");
+                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Fatal error in RabbitMQ Consumer");
+                return Task.CompletedTask;
+            }
+        }
+
+        private async Task RunMockMode(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogDebug("RabbitMQ Consumer running in mock mode...");
+                await Task.Delay(30000, stoppingToken);
             }
         }
 
@@ -92,29 +109,7 @@ namespace Stock.API.RabbitMQ
             }
         }
 
-        private async Task ProcessPendingMessages()
-        {
-            // Simular processamento de mensagens que chegariam via RabbitMQ
-            // Implementa consumo das filas conforme especificação do desafio
-            
-            _logger.LogDebug("🔍 Checking RabbitMQ queues: {StockQueue}, {OrderQueue}", 
-                _stockUpdateQueue, _orderCreatedQueue);
-            
-            // Simular mensagem ocasional para demonstração
-            if (DateTime.Now.Second % 45 == 0) // A cada 45 segundos
-            {
-                var mockStockMessage = new StockUpdateMessage
-                {
-                    ProductId = Random.Shared.Next(1, 5),
-                    Quantity = -Random.Shared.Next(1, 3),
-                    Timestamp = DateTime.UtcNow,
-                    Source = "Sales.API (RabbitMQ Simulation)"
-                };
-                
-                _logger.LogInformation("📥 Processing stock update from RabbitMQ queue: {Queue}", _stockUpdateQueue);
-                await ProcessStockUpdateMessage(mockStockMessage);
-            }
-        }
+    // Remove ProcessPendingMessages, pois não é mais necessário no modo real
 
         /// <summary>
         /// Mock method to simulate processing stock update messages
