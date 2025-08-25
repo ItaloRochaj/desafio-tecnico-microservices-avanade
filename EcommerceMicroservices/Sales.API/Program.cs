@@ -8,8 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configuração do Banco de Dados
 builder.Services.AddDbContext<SalesContext>(options =>
-    options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"),
-    ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
+    )
+);
 
 // Autenticação JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
@@ -29,20 +32,24 @@ builder.Services.AddHttpClient<StockService>(client =>
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 
-// Add services to the container.
+// Controllers e JSON config
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Configurar para lidar com referências circulares
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
-builder.Services.AddEndpointsApiExplorer();
 
+// Swagger sempre ativo (para integração com API Gateway)
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Forçar escuta na porta 80 para Docker
-builder.WebHost.UseUrls("http://*:80");
+
+// Para rodar localmente, use a porta 5285 (ajustável conforme necessário)
+if (args.Contains("--local"))
+{
+    builder.WebHost.UseUrls("http://localhost:5285");
+}
 
 var app = builder.Build();
 
@@ -57,19 +64,18 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Error initializing database");
+        logger.LogError(ex, "Erro ao inicializar banco de dados");
     }
 }
 
-// Configure the HTTP request pipeline.
-
-// Sempre habilita Swagger para integração com o Gateway
+// Pipeline HTTP
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

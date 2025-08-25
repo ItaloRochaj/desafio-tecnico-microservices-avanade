@@ -4,12 +4,15 @@ using Sales.API.Data;
 using Sales.API.Models;
 using Sales.API.Services;
 using Sales.API.RabbitMQ;
+
+using Microsoft.AspNetCore.Authorization;
 using Sales.API.DTOs;
 
 namespace Sales.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class OrdersController : ControllerBase
 {
     private readonly SalesContext _context;
